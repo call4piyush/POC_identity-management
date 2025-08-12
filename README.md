@@ -68,6 +68,11 @@ mvn clean package
 ```bash
 mvn spring-boot:run
 ```
+- **Run with Keycloak profile** (uses issuer-uri):
+```bash
+docker compose up -d keycloak
+mvn spring-boot:run -Dspring-boot.run.profiles=keycloak
+```
 - Run tests (unit, integration, WireMock, contracts)
 ```bash
 mvn clean test
@@ -83,6 +88,21 @@ curl -X POST http://localhost:8080/api/token \
   -d '{"username":"user","password":"password","scopes":["read","write"]}'
 ```
 - Use the access_token in API calls: Authorization: Bearer <token>
+
+## Using Keycloak
+
+- Start Keycloak: `docker compose up -d keycloak`
+- Console: `http://localhost:8081/` (admin/admin)
+- Realm: `demo-realm`
+- Client: `springboot-api` (public)
+- Test user: `api-user/password`
+- Get token via Direct Access Grant:
+```bash
+curl -X POST "http://localhost:8081/realms/demo-realm/protocol/openid-connect/token" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=password&client_id=springboot-api&username=api-user&password=password"
+```
+- Use the `access_token` from response with the API.
 
 ## API Endpoints
 

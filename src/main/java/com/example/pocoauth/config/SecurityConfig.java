@@ -39,6 +39,7 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -62,11 +63,11 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui.html", "/swagger-ui/**").permitAll()
                         .requestMatchers("/api/resilience/status").permitAll()
                         .requestMatchers("/h2-console/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/users").hasAnyAuthority("SCOPE_write")
-                        .requestMatchers(HttpMethod.GET, "/api/users").hasAnyAuthority("SCOPE_read")
+                        .requestMatchers(HttpMethod.POST, "/api/users").hasAnyAuthority("SCOPE_write", "ROLE_admin")
+                        .requestMatchers(HttpMethod.GET, "/api/users").hasAnyAuthority("SCOPE_read", "ROLE_user", "ROLE_admin")
                         .anyRequest().authenticated()
                 )
-                .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()))
+                .oauth2ResourceServer(oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter())))
                 .httpBasic(Customizer.withDefaults())
                 .headers(headers -> headers.frameOptions(frame -> frame.sameOrigin()));
         return http.build();
@@ -126,6 +127,13 @@ public class SecurityConfig {
     @Bean
     public JwtDecoder jwtDecoder(KeyPair keyPair) {
         return NimbusJwtDecoder.withPublicKey((RSAPublicKey) keyPair.getPublic()).build();
+    }
+
+    @Bean
+    public JwtAuthenticationConverter jwtAuthenticationConverter() {
+        JwtAuthenticationConverter converter = new JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(new KeycloakJwtAuthConverter());
+        return converter;
     }
 }
 

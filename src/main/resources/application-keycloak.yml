@@ -1,0 +1,13 @@
+# Licensed under the Apache License, Version 2.0 (the "License"); Copyright 2025 Piyush Joshi
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8081/realms/demo-realm
+
+app:
+  auth:
+    provider: keycloak
+
+
