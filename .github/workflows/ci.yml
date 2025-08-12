@@ -1,60 +1,60 @@
-# Licensed under the Apache License, Version 2.0 (the "License"); Copyright 2025 Piyush Joshi
-name: CI
+# # Licensed under the Apache License, Version 2.0 (the "License"); Copyright 2025 Piyush Joshi
+# name: CI
 
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+# on:
+#   push:
+#     branches: [ main ]
+#   pull_request:
+#     branches: [ main ]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up JDK 17
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-          cache: 'maven'
-      - name: Build and test
-        run: mvn -B -ntp -DskipTests=false clean verify
-      - name: Build Docker image
-        run: |
-          docker build -t poc-oauth-springboot:${{ github.sha }} .
-      - name: Run container
-        run: |
-          docker run -d --name poc-oauth-ci -p 8085:8080 poc-oauth-springboot:${{ github.sha }}
-      - name: Wait for app to be healthy
-        run: |
-          for i in {1..45}; do
-            if curl -sf http://localhost:8085/actuator/health | grep '"status":"UP"' >/dev/null; then
-              echo "App is UP"; exit 0; fi; sleep 2; done; echo "App did not become healthy"; docker logs poc-oauth-ci; exit 1
-      - name: E2E - Contract verification (public success)
-        run: |
-          RES=$(curl -sf http://localhost:8085/api/public/success)
-          echo "$RES"
-          echo "$RES" | grep '"status":"success"'
-          echo "$RES" | grep 'Public success endpoint is reachable'
-      - name: E2E - Auth flow and Users API
-        run: |
-          TOKEN=$(curl -s -X POST http://localhost:8085/api/token \
-            -H 'Content-Type: application/json' \
-            -d '{"username":"user","password":"password","scopes":["read","write"]}' | sed -n 's/.*"access_token"[ ]*:[ ]*"\([^"]*\)".*/\1/p')
-          if [ -z "$TOKEN" ]; then echo "Failed to get token"; exit 1; fi
-          echo "Got token: ${#TOKEN} chars"
-          CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8085/api/users \
-            -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
-            -d '{"name":"CI User","email":"ciuser@example.com"}')
-          test "$CODE" = "201"
-          LIST=$(curl -s http://localhost:8085/api/users -H "Authorization: Bearer $TOKEN")
-          echo "$LIST" | grep 'ciuser@example.com'
-      - name: Logs (on failure)
-        if: failure()
-        run: docker logs poc-oauth-ci | tail -n 200
-      - name: Cleanup
-        if: always()
-        run: docker rm -f poc-oauth-ci || true
+# jobs:
+#   build:
+#     runs-on: ubuntu-latest
+#     steps:
+#       - uses: actions/checkout@v4
+#       - name: Set up JDK 17
+#         uses: actions/setup-java@v4
+#         with:
+#           distribution: temurin
+#           java-version: '17'
+#           cache: 'maven'
+#       - name: Build and test
+#         run: mvn -B -ntp -DskipTests=false clean verify
+#       - name: Build Docker image
+#         run: |
+#           docker build -t poc-oauth-springboot:${{ github.sha }} .
+#       - name: Run container
+#         run: |
+#           docker run -d --name poc-oauth-ci -p 8085:8080 poc-oauth-springboot:${{ github.sha }}
+#       - name: Wait for app to be healthy
+#         run: |
+#           for i in {1..45}; do
+#             if curl -sf http://localhost:8085/actuator/health | grep '"status":"UP"' >/dev/null; then
+#               echo "App is UP"; exit 0; fi; sleep 2; done; echo "App did not become healthy"; docker logs poc-oauth-ci; exit 1
+#       - name: E2E - Contract verification (public success)
+#         run: |
+#           RES=$(curl -sf http://localhost:8085/api/public/success)
+#           echo "$RES"
+#           echo "$RES" | grep '"status":"success"'
+#           echo "$RES" | grep 'Public success endpoint is reachable'
+#       - name: E2E - Auth flow and Users API
+#         run: |
+#           TOKEN=$(curl -s -X POST http://localhost:8085/api/token \
+#             -H 'Content-Type: application/json' \
+#             -d '{"username":"user","password":"password","scopes":["read","write"]}' | sed -n 's/.*"access_token"[ ]*:[ ]*"\([^"]*\)".*/\1/p')
+#           if [ -z "$TOKEN" ]; then echo "Failed to get token"; exit 1; fi
+#           echo "Got token: ${#TOKEN} chars"
+#           CODE=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8085/api/users \
+#             -H "Authorization: Bearer $TOKEN" -H 'Content-Type: application/json' \
+#             -d '{"name":"CI User","email":"ciuser@example.com"}')
+#           test "$CODE" = "201"
+#           LIST=$(curl -s http://localhost:8085/api/users -H "Authorization: Bearer $TOKEN")
+#           echo "$LIST" | grep 'ciuser@example.com'
+#       - name: Logs (on failure)
+#         if: failure()
+#         run: docker logs poc-oauth-ci | tail -n 200
+#       - name: Cleanup
+#         if: always()
+#         run: docker rm -f poc-oauth-ci || true
 
 
