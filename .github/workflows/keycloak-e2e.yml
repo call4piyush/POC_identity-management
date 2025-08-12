@@ -15,14 +15,16 @@ jobs:
         ports:
           - 8081:8081
         options: >-
-          --health-cmd "curl -f http://localhost:8081/ || exit 1" --health-interval 5s --health-timeout 2s --health-retries 60
-        env:
-          KC_HTTP_PORT: 8081
-          KEYCLOAK_ADMIN: admin
-          KEYCLOAK_ADMIN_PASSWORD: admin
-        command: ["start-dev", "--import-realm"]
-        volumes:
-          - ${{ github.workspace }}/keycloak/realms:/opt/keycloak/data/import
+          --health-cmd "curl -f http://localhost:8081/ || exit 1" 
+          --health-interval 5s 
+          --health-timeout 2s 
+          --health-retries 60
+          -e KC_HTTP_PORT=8081
+          -e KEYCLOAK_ADMIN=admin
+          -e KEYCLOAK_ADMIN_PASSWORD=admin
+          -v ${{ github.workspace }}/keycloak/realms:/opt/keycloak/data/import
+          --entrypoint /bin/bash
+          -c "cd /opt/keycloak && ./bin/kc.sh start-dev --import-realm"
     steps:
       - uses: actions/checkout@v4
       - name: Set up JDK 17
