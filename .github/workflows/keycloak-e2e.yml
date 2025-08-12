@@ -22,9 +22,13 @@ jobs:
           -e KC_HTTP_PORT=8081
           -e KEYCLOAK_ADMIN=admin
           -e KEYCLOAK_ADMIN_PASSWORD=admin
+          -e KC_IMPORT_REALM_URI=file:///opt/keycloak/data/import/demo-realm.json
           -v ${{ github.workspace }}/keycloak/realms:/opt/keycloak/data/import
-          --entrypoint /bin/bash
-          -c "cd /opt/keycloak && ./bin/kc.sh start-dev --import-realm"
+        env:
+          KC_HTTP_PORT: 8081
+          KEYCLOAK_ADMIN: admin
+          KEYCLOAK_ADMIN_PASSWORD: admin
+          KC_IMPORT_REALM_URI: file:///opt/keycloak/data/import/demo-realm.json
       wiremock:
         image: wiremock/wiremock:3.5.4
         ports:
@@ -47,6 +51,22 @@ jobs:
         run: mvn -B -ntp -DskipTests package
       - name: Build Docker image
         run: docker build -t poc-oauth-springboot:${{ github.sha }} .
+      - name: Start Keycloak manually
+        run: |
+          docker run -d --name keycloak-manual \
+            -p 8081:8081 \
+            -e KC_HTTP_PORT=8081 \
+            -e KEYCLOAK_ADMIN=admin \
+            -e KEYCLOAK_ADMIN_PASSWORD=admin \
+            -e KC_IMPORT_REALM_URI=file:///opt/keycloak/data/import/demo-realm.json \
+            -v ${{ github.workspace }}/keycloak/realms:/opt/keycloak/data/import \
+            quay.io/keycloak/keycloak:25.0.4 start-dev --import-realm
+          
+          # Wait for Keycloak to be ready
+          for i in {1..60}; do
+            if curl -sf http://localhost:8081/ || exit 1; then
+              echo "Keycloak is ready"; break; fi
+            sleep 5; done
       - name: Run app with Keycloak profile
         run: |
           docker run -d --name poc-oauth-kc -p 8086:8080 \
@@ -120,8 +140,11 @@ jobs:
         run: |
           docker logs poc-oauth-kc | tail -n 300
           docker logs wiremock | tail -n 100
+          docker logs keycloak-manual | tail -n 100
       - name: Cleanup
         if: always()
-        run: docker rm -f poc-oauth-kc || true
+        run: |
+          docker rm -f poc-oauth-kc || true
+          docker rm -f keycloak-manual || true
 
 
