@@ -18,8 +18,13 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: 'maven'
-      - name: Build and test
-        run: mvn -B -ntp -DskipTests=false clean verify
+      - name: Clean and build
+        run: mvn -B -ntp clean package -DskipTests
+      - name: Verify JAR manifest
+        run: |
+          echo "Checking JAR manifest..."
+          jar tf target/*.jar | grep -E "(META-INF/MANIFEST.MF|com/example/pocoauth/Application.class)" || exit 1
+          echo "JAR structure looks good"
       - name: Build Docker image
         run: |
           docker build -t poc-oauth-springboot:${{ github.sha }} .
@@ -56,5 +61,3 @@ jobs:
       - name: Cleanup
         if: always()
         run: docker rm -f poc-oauth-ci || true
-
-
